@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Importamos la conexión a BD, Servicios y Repositorio
@@ -7,15 +7,25 @@ from app.services.deepl_service import DeepLService
 from app.services.cache_service import CacheService
 from app.repositories.translation_repo import TranslationRepository
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from app.core.limiter import limiter
+
 app = FastAPI(title="Smart Translator API")
+
+# Configuración de rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Instanciamos los servicios
 deepl_service = DeepLService()
 cache_service = CacheService()
-
-
 @app.post("/translate")
+@limiter.limit("5/minute")
 async def translate_text(
+        request: Request,
         text: str,
         target_lang: str,
         db: AsyncSession = Depends(get_db)  # Inyectamos la sesión de BD aquí
@@ -28,7 +38,7 @@ async def translate_text(
         return {
             "original": text,
             "translated": cached_text,
-            "source": "CACHE (Redis) ⚡",  # <--- ESTO ES LO QUE TE FALTABA
+            "source": "CACHE (Redis) ⚡",
             "target_lang": target_lang
         }
 
