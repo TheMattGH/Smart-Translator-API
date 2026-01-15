@@ -1,6 +1,7 @@
 import os.path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator, ValidationInfo
 
 # Calcula la ruta raíz del proyecto (sube 3 niveles desde este archivo)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,5 +20,13 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
         extra="ignore"
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str | None, info: ValidationInfo) -> str | None:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            # Reemplazamos el protocolo antiguo por el asíncrono
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
 
 settings = Settings()
