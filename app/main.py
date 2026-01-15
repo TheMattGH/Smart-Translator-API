@@ -22,6 +22,10 @@ app.add_middleware(SlowAPIMiddleware)
 # Instanciamos los servicios
 deepl_service = DeepLService()
 cache_service = CacheService()
+
+@app.get("/")
+def read_root():
+    return {"status": "online", "message": "Smart Translator API is running 🚀"}
 @app.post("/translate")
 @limiter.limit("5/minute")
 async def translate_text(
