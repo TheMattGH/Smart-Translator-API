@@ -4,6 +4,7 @@
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&logo=nginx&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white)
@@ -28,8 +29,8 @@ Este microservicio implementa el patrón **Cache-Aside** para minimizar las llam
 
 ```mermaid
 graph LR
-    Client[Cliente] -->|HTTPS / Puerto 443| Cloud[Render / Nginx]
-    Cloud -->|Puerto 8000| API[Servicio FastAPI]
+    Client[Cliente] -->|HTTP/HTTPS| Gateway[Nginx / Render LB]
+    Gateway -->|Proxy Pass| API[Servicio FastAPI]
     API -->|1. Verifica| Redis[(Caché Redis)]
     API -->|2. Fallback| DeepL[API DeepL]
     API -->|3. Registra| DB[(PostgreSQL)]
@@ -37,7 +38,7 @@ graph LR
 
 | Etapa            | Descripción                                                                                                                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ingreso**      | Render gestiona la capa SSL (HTTPS) y redirige el tráfico a la API.                                                                                                                                      |
+| **Ingreso**      | **Local:** Nginx actúa como Proxy Inverso en el puerto 80. **Cloud:** Render gestiona la capa SSL y el balanceo de carga.                                                                                |
 | **Seguridad**    | El sistema aplica Rate Limiting (algoritmo Token Bucket) para prevenir abusos (defecto: 5 peticiones/min).                                                                                               |
 | **Optimización** | **Hit:** Si la traducción existe en Redis, retorna inmediatamente (Latencia ~0ms, Costo $0). **Miss:** Si no existe, consulta a DeepL, guarda el resultado en caché (TTL 24h) y registra la transacción. |
 | **Persistencia** | Todas las transacciones son auditadas en PostgreSQL para análisis histórico.                                                                                                                             |
@@ -48,11 +49,13 @@ graph LR
 
 - ⚡ **Caché Inteligente:** Utiliza Redis para almacenar traducciones recientes, reduciendo el consumo de la API externa hasta en un 90% para consultas repetitivas.
 
-- 🛡️ **Rate Limiting:** Protege la infraestructura y las cuotas de la API utilizando slowapi (basado en Redis).
+- 🛡️ **Gateway Robusto:** Configuración de Nginx personalizada como punto de entrada único, aislando la lógica de la aplicación del tráfico directo.
 
-- 📊 **Auditoría Persistente:** Registro asíncrono de cada petición en PostgreSQL utilizando SQLAlchemy y Alembic para migraciones.
+- 🚦 **Rate Limiting:** Protección contra ataques DDoS y control de cuotas mediante slowapi con almacenamiento en memoria.
 
-- ☁️ **Cloud Native:** Desplegado en Render con gestión automática de bases de datos y caché gestionado.
+- 📊 **Auditoría Persistente:** Registro asíncrono de cada petición en PostgreSQL utilizando SQLAlchemy.
+
+- ☁️ **Cloud Native:** Arquitectura Dockerizada lista para desplegar en cualquier proveedor (Render, AWS, DigitalOcean).
 
 ---
 
@@ -60,8 +63,9 @@ graph LR
 
 | Componente    | Tecnología      | Rol                                              |
 | ------------- | --------------- | ------------------------------------------------ |
-| Lenguaje      | Python 3.11     | Lógica del núcleo                                |
+| Lenguaje      | Python 3.13     | Lógica del núcleo                                |
 | Framework     | FastAPI         | API REST Asíncrona                               |
+| Gateway       | Nginx           | Proxy Inverso y Servidor Web                     |
 | Base de Datos | PostgreSQL      | Datos Históricos y Auditoría                     |
 | Caché         | Redis           | Almacenamiento rápido y Backend de Rate Limiting |
 | CI/CD         | GitHub / Render | Despliegue continuo automático                   |
@@ -87,16 +91,12 @@ cd Smart-Translator-API
 
 **2. Configurar Entorno:**
 
-Crea un archivo `.env` en la raíz del proyecto basado en el siguiente ejemplo:
+Crea un archivo `.env` en la raíz del proyecto.
+(Docker priorizará la configuración interna para Redis/DB, solo necesitas tus claves externas):
 
 ```env
 DEEPL_API_KEY=tu_clave_deepl_aqui
 DEEPL_URL=https://api-free.deepl.com/v2/translate
-
-# Base de Datos y Caché (Valores por defecto de Docker)
-DATABASE_URL=postgresql+asyncpg://user:password@db:5432/translator_db
-REDIS_HOST=cache
-REDIS_PORT=6379
 ```
 
 **3. Construir y Levantar:**
@@ -105,9 +105,11 @@ REDIS_PORT=6379
 docker-compose up --build
 ```
 
-**4. Acceder a la Documentación:**
+**4. Acceder:**
 
-Navega a http://localhost/docs para interactuar con la interfaz Swagger UI.
+El servicio estará disponible a través de Nginx en el puerto 80:
+
+- **Swagger UI:** http://localhost/docs
 
 ---
 
@@ -152,6 +154,6 @@ curl -X 'POST' \
 
 <div align="center">
 
-Desarrollado con ❤️ por [TheMattGH](https://github.com/TheMattGH)
+Desarrollado con ❤️ por TheMattGH
 
 </div>
