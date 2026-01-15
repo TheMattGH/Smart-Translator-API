@@ -23,4 +23,4 @@ COPY . .
 
 # 7. Comando para arrancar la API
 # Usamos 0.0.0.0 para que sea accesible desde fuera del contenedor
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000
