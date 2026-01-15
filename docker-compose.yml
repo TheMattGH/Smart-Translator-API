@@ -49,6 +49,10 @@ services:
     image: redis:alpine
     container_name: smart_translator_redis
     restart: always
+    command: redis-server --appendonly yes
+    volumes:
+        - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:

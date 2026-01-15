@@ -7,9 +7,16 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Render](https://img.shields.io/badge/Render-%46E3B7.svg?style=for-the-badge&logo=render&logoColor=white)
 
-Una API de traducción de alto rendimiento contenerizada, diseñada como un middleware inteligente sobre DeepL.  
-Optimizada para reducir costos y latencia, garantizando la seguridad mediante estrategias de **Rate Limiting** y **Caché**.
+<br>
+
+[![Ver Demo en Vivo](https://img.shields.io/static/v1?label=Live&message=Ver%20Demo%20Swagger&color=success&style=for-the-badge)](https://smart-translator-api.onrender.com/docs)
+
+<p>
+  <b>Una API de traducción de alto rendimiento contenerizada, diseñada como un middleware inteligente sobre DeepL.</b><br>
+  Optimizada para reducir costos y latencia, garantizando la seguridad mediante estrategias de <b>Rate Limiting</b> y <b>Caché</b>.
+</p>
 
 </div>
 
@@ -21,8 +28,8 @@ Este microservicio implementa el patrón **Cache-Aside** para minimizar las llam
 
 ```mermaid
 graph LR
-    Client[Cliente] -->|Puerto 80| Nginx[Proxy Nginx]
-    Nginx -->|Puerto 8000| API[Servicio FastAPI]
+    Client[Cliente] -->|HTTPS / Puerto 443| Cloud[Render / Nginx]
+    Cloud -->|Puerto 8000| API[Servicio FastAPI]
     API -->|1. Verifica| Redis[(Caché Redis)]
     API -->|2. Fallback| DeepL[API DeepL]
     API -->|3. Registra| DB[(PostgreSQL)]
@@ -30,7 +37,7 @@ graph LR
 
 | Etapa            | Descripción                                                                                                                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ingreso**      | Nginx actúa como Proxy Inverso, gestionando el tráfico entrante y redirigiéndolo a la API.                                                                                                               |
+| **Ingreso**      | Render gestiona la capa SSL (HTTPS) y redirige el tráfico a la API.                                                                                                                                      |
 | **Seguridad**    | El sistema aplica Rate Limiting (algoritmo Token Bucket) para prevenir abusos (defecto: 5 peticiones/min).                                                                                               |
 | **Optimización** | **Hit:** Si la traducción existe en Redis, retorna inmediatamente (Latencia ~0ms, Costo $0). **Miss:** Si no existe, consulta a DeepL, guarda el resultado en caché (TTL 24h) y registra la transacción. |
 | **Persistencia** | Todas las transacciones son auditadas en PostgreSQL para análisis histórico.                                                                                                                             |
@@ -43,9 +50,9 @@ graph LR
 
 - 🛡️ **Rate Limiting:** Protege la infraestructura y las cuotas de la API utilizando slowapi (basado en Redis).
 
-- 📊 **Auditoría Persistente:** Registro asíncrono de cada petición en PostgreSQL utilizando SQLAlchemy.
+- 📊 **Auditoría Persistente:** Registro asíncrono de cada petición en PostgreSQL utilizando SQLAlchemy y Alembic para migraciones.
 
-- 🐳 **Infraestructura Lista para Producción:** Entorno totalmente dockerizado con Nginx como gateway y contenedores aislados para BD y Caché.
+- ☁️ **Cloud Native:** Desplegado en Render con gestión automática de bases de datos y caché gestionado.
 
 ---
 
@@ -57,7 +64,7 @@ graph LR
 | Framework     | FastAPI         | API REST Asíncrona                               |
 | Base de Datos | PostgreSQL      | Datos Históricos y Auditoría                     |
 | Caché         | Redis           | Almacenamiento rápido y Backend de Rate Limiting |
-| Servidor      | Uvicorn / Nginx | Servidor ASGI y Proxy Inverso                    |
+| CI/CD         | GitHub / Render | Despliegue continuo automático                   |
 | Contenedor    | Docker Compose  | Orquestación de servicios                        |
 
 ---
@@ -104,16 +111,20 @@ Navega a http://localhost/docs para interactuar con la interfaz Swagger UI.
 
 ---
 
-## 🔌 Ejemplo de Uso de la API
+## 🔌 Ejemplo de Uso de la API (Producción)
+
+Puedes probar la API directamente contra el servidor en la nube:
 
 ### Endpoint: `POST /translate`
 
 ```bash
 curl -X 'POST' \
-  'http://localhost/translate?text=Hello%20World&target_lang=ES' \
+  'https://smart-translator-api.onrender.com/translate?text=Hello%20World&target_lang=ES' \
   -H 'accept: application/json' \
   -d ''
 ```
+
+> **Nota:** El servicio está alojado en el plan gratuito de Render. Si no ha recibido tráfico recientemente, puede tardar hasta 50 segundos en "despertar" (Cold Start).
 
 ### Respuesta (Cache Miss - Obtenido de DeepL):
 
