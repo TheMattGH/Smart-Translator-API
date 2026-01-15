@@ -4,8 +4,15 @@ from app.core.config import settings
 
 class CacheService:
     def __init__(self):
+        if settings.REDIS_URL:
+            url = settings.REDIS_URL
+            print("🔌 Usando conexión REDIS_URL (Render/Cloud)")
+        else:
+            url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}"
+            print(f"🔌 Usando conexión manual: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+
         self.redis = redis.from_url(
-            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
+            url,
             encoding="utf-8",
             decode_responses=True
         )

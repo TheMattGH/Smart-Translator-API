@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_URL: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(BASE_DIR, ".env"),
