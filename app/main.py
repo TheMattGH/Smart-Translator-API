@@ -1,16 +1,22 @@
-from fastapi import FastAPI
-app = FastAPI(
-    title="Smart Translator API",
-    version="0.1.0",
-    description="Microservicio de traducción con caché inteligente."
-)
+from fastapi import FastAPI, HTTPException
+from app.services.deepl_service import DeepLService
 
-# Endpoint de prueba (Health Check)
-@app.get("/")
-def read_root():
-    return {"status": "online", "message": "Smart Translator API is running!"}
+app = FastAPI(title="Smart Translator API")
 
-# Endpoint de prueba con parámetro
-@app.get("/ping")
-def pong():
-    return {"ping": "pong!"}
+# Instanciamos el servicio
+deepl_service = DeepLService()
+
+
+@app.post("/translate")
+async def translate_text(text: str, target_lang: str):
+    # Llamamos al servicio (nota el await, ¡es asíncrono!)
+    translated_text = await deepl_service.translate(text, target_lang)
+
+    if translated_text is None:
+        raise HTTPException(status_code=503, detail="Error al traducir con DeepL")
+
+    return {
+        "original": text,
+        "translated": translated_text,
+        "target_lang": target_lang
+    }
