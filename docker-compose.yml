@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  # API
+  api:
+    build: .  # Construye usando el Dockerfile de la carpeta actual
+    container_name: smart_translator_api
+    ports:
+      - "8000:8000"  # Expone el puerto 8000
+    depends_on:
+      - db
+      - cache
+    # Sobreescribimos localhost por los nombres de servicio
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/translator_db
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      # Pasamos la clave de DeepL desde tu archivo .env local
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      - DEEPL_URL=${DEEPL_URL}
+    env_file:
+      - .env
   # Servicio de Base de Datos
   db:
     image: postgres:15-alpine
@@ -20,8 +39,6 @@ services:
     image: redis:alpine
     container_name: smart_translator_redis
     restart: always
-    ports:
-      - "6379:6379"
 
 volumes:
   postgres_data:
