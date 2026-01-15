@@ -34,6 +34,8 @@ async def translate_text(
         target_lang: str,
         db: AsyncSession = Depends(get_db)  # Inyectamos la sesión de BD aquí
 ):
+    target_lang = target_lang.upper()
+    text = text.strip()
     # VERIFICAR CACHÉ (REDIS)
     # Buscamos si ya tradujimos esto antes
     cached_text = await cache_service.get_translation(text, target_lang)
